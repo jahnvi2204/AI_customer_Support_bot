@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Customer Support Demo</title>
+    <style>
+      body { font-family: system-ui, sans-serif; margin: 2rem; }
+      #chat { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; max-width: 800px; }
+      .msg { margin: 0.5rem 0; }
+      .user { color: #0b5; }
+      .assistant { color: #06c; }
+      #input { display: flex; gap: 0.5rem; margin-top: 1rem; }
+      textarea { flex: 1; height: 80px; }
+    </style>
+  </head>
+  <body>
+    <h1>AI Customer Support</h1>
+    <div>
+      Session ID: <input id="sessionId" value="demo-session" />
+      <button id="startSession">Start Session</button>
+      <button id="summarize">Summarize</button>
+    </div>
+    <div id="chat"></div>
+    <div id="input">
+      <textarea id="text" placeholder="Type your message..."></textarea>
+      <button id="send">Send</button>
+    </div>
+    <script>
+      const apiBase = 'http://localhost:8000';
+      const chat = document.getElementById('chat');
+      function add(role, content){
+        const div = document.createElement('div');
+        div.className = 'msg ' + role;
+        div.textContent = role + ': ' + content;
+        chat.appendChild(div);
+        chat.scrollTop = chat.scrollHeight;
+      }
+      document.getElementById('startSession').onclick = async () => {
+        const sessionId = document.getElementById('sessionId').value;
+        await fetch(`${apiBase}/sessions/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId }) });
+        add('system', 'Session started: ' + sessionId);
+      };
+      document.getElementById('send').onclick = async () => {
+        const sessionId = document.getElementById('sessionId').value;
+        const content = document.getElementById('text').value;
+        if (!content) return;
+        add('user', content);
+        document.getElementById('text').value='';
+        const res = await fetch(`${apiBase}/messages/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ session_id: sessionId, content }) });
+        const data = await res.json();
+        add('assistant', data.reply + (data.escalated ? ' [escalation suggested]' : ''));
+      };
+      document.getElementById('summarize').onclick = async () => {
+        const sessionId = document.getElementById('sessionId').value;
+        const res = await fetch(`${apiBase}/messages/summary/${sessionId}`);
+        const data = await res.json();
+        add('assistant', 'Summary:\n' + data.summary);
+      };
+    </script>
+  </body>
+  </html>
+
+
